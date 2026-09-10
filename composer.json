@@ -1,0 +1,21 @@
+{
+    "name": "elrayn/table-export",
+    "description": "Export arrays or query results to Excel or PDF with one consistent API",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Muhammad Rayhan"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "phpoffice/phpspreadsheet": "^1.29",
+        "dompdf/dompdf": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Elrayn\\TableExport\\": "src/"
+        }
+    }
+}
