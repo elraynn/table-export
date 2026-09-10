@@ -15,9 +15,17 @@
     "suggest": {
         "dompdf/dompdf": "Required if you use asPdf() (^2.0.9, or ^3.0 on PHP 8.1+)"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
     "autoload": {
         "psr-4": {
             "Elrayn\\TableExport\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Elrayn\\TableExport\\Tests\\": "tests/"
         }
     }
 }
