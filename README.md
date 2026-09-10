@@ -6,7 +6,15 @@ If you've built reporting features in a PHP business app (invoices, purchase ord
 
 ## Requirements
 
-PHP 7.4+, [PhpSpreadsheet](https://github.com/PHPOffice/PhpSpreadsheet) and [dompdf](https://github.com/dompdf/dompdf) (both pulled in as dependencies).
+PHP 7.4+ and [PhpSpreadsheet](https://github.com/PHPOffice/PhpSpreadsheet) (pulled in as a dependency).
+
+`asPdf()` needs [dompdf](https://github.com/dompdf/dompdf) too, but it's not a hard dependency, install it yourself if you use that method:
+
+```
+composer require dompdf/dompdf
+```
+
+On PHP 8.1+, Composer will give you dompdf 3.x. On PHP 7.4-8.0, it'll give you 2.0.8, the last release in that line (Composer's security audit will warn about it, there's no dompdf release that's both PHP <8.1 compatible and advisory-free right now).
 
 ## Install
 

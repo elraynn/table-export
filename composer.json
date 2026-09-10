@@ -10,8 +10,10 @@
     ],
     "require": {
         "php": ">=7.4",
-        "phpoffice/phpspreadsheet": "^1.9",
-        "dompdf/dompdf": "^2.0.9"
+        "phpoffice/phpspreadsheet": "^1.9"
+    },
+    "suggest": {
+        "dompdf/dompdf": "Required if you use asPdf() (^2.0.9, or ^3.0 on PHP 8.1+)"
     },
     "autoload": {
         "psr-4": {
