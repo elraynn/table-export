@@ -38,6 +38,24 @@ class Export
 
     public function asExcel(string $filename = 'export.xlsx'): void
     {
+        // PhpSpreadsheet 1.x throws a notice on PHP 7.4+ every time a numeric
+        // cell is set (DefaultValueBinder does an array offset check before
+        // its is_string check). Harmless, but a stray notice here corrupts
+        // the binary output since it's already being streamed. Suppress
+        // display for this call only, restore right after.
+        $previous = ini_set('display_errors', '0');
+        $spreadsheet = $this->toSpreadsheet();
+        ini_set('display_errors', $previous);
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        (new Xlsx($spreadsheet))->save('php://output');
+    }
+
+    public function toSpreadsheet(): Spreadsheet
+    {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $row = 1;
@@ -77,11 +95,7 @@ class Export
             $sheet->getColumnDimension($c)->setAutoSize(true);
         }
 
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        (new Xlsx($spreadsheet))->save('php://output');
+        return $spreadsheet;
     }
 
     public function asPdf(string $filename = 'export.pdf'): void
@@ -92,7 +106,7 @@ class Export
         $dompdf->stream($filename, ['Attachment' => true]);
     }
 
-    protected function toHtml(): string
+    public function toHtml(): string
     {
         $html = '<style>table{width:100%;border-collapse:collapse;font-family:sans-serif;font-size:12px}';
         $html .= 'th,td{border:1px solid #999;padding:4px 6px;text-align:left}th{background:#eee}</style>';
