@@ -3,6 +3,7 @@
 namespace Elrayn\TableExport\Tests;
 
 use Elrayn\TableExport\Export;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PHPUnit\Framework\TestCase;
 
 class ExportTest extends TestCase
@@ -84,5 +85,32 @@ class ExportTest extends TestCase
 
         $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
         $this->assertStringContainsString('&lt;script&gt;', $html);
+    }
+
+    public function testXlsxBinaryProducesAValidReadableSpreadsheet(): void
+    {
+        $binary = Export::make($this->sampleRows())
+            ->columns(['kode' => 'Kode', 'nama' => 'Nama', 'total' => 'Total'])
+            ->toXlsxBinary();
+
+        $this->assertStringStartsWith("PK\x03\x04", $binary, 'xlsx files are zip archives');
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'table-export-test') . '.xlsx';
+        file_put_contents($tempFile, $binary);
+
+        $sheet = IOFactory::load($tempFile)->getActiveSheet();
+        unlink($tempFile);
+
+        $this->assertSame('Kode', $sheet->getCell('A1')->getValue());
+        $this->assertSame('Budi', $sheet->getCell('B2')->getValue());
+    }
+
+    public function testPdfBinaryProducesAValidPdf(): void
+    {
+        $binary = Export::make($this->sampleRows())
+            ->columns(['kode' => 'Kode', 'nama' => 'Nama', 'total' => 'Total'])
+            ->toPdfBinary();
+
+        $this->assertStringStartsWith('%PDF', $binary);
     }
 }

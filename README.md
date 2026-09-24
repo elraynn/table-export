@@ -8,7 +8,7 @@ If you've built reporting features in a PHP business app (invoices, purchase ord
 
 PHP 7.4+ and [PhpSpreadsheet](https://github.com/PHPOffice/PhpSpreadsheet) (pulled in as a dependency).
 
-`asPdf()` needs [dompdf](https://github.com/dompdf/dompdf) too, but it's not a hard dependency, install it yourself if you use that method:
+`asPdf()` and `toPdfBinary()` need [dompdf](https://github.com/dompdf/dompdf) too, but it's not a hard dependency, install it yourself if you use either:
 
 ```
 composer require dompdf/dompdf
@@ -46,15 +46,43 @@ Export::make($rows)
     ->asPdf('laporan.pdf');
 ```
 
-Both methods send the right headers and stream the file directly, so a controller action can be as small as:
+Both methods send the right headers and stream the file directly, so from a plain script this is the whole thing:
+
+```php
+Export::make($rows)->columns([...])->asExcel('pembelian.xlsx');
+// headers sent, file streamed, done
+```
+
+### Using this inside a framework
+
+`asExcel()` and `asPdf()` call `header()` and echo the file straight to output — they assume nothing else is going to touch the response afterward. That's true for a plain script, but **not** true inside something like a Laravel controller: the framework builds its own `Response` after your action returns and sends *that*, which stomps the headers you just set back to `text/html`. The file contents still get echoed first, so you end up with a broken download instead of an error, which makes this easy to miss until someone opens the file.
+
+Use `toXlsxBinary()` / `toPdfBinary()` instead — same output, but returned as a plain string with no headers sent and nothing echoed, so you can hand it to your framework's own response:
 
 ```php
 public function exportExcel()
 {
-    Export::make($this->reportModel->all())
+    $binary = Export::make($this->reportModel->all())
         ->title('Laporan Pembelian')
         ->columns(['kode' => 'Kode', 'tanggal' => 'Tanggal', 'total' => 'Total'])
-        ->asExcel('pembelian.xlsx');
+        ->toXlsxBinary();
+
+    return response($binary, 200, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition' => 'attachment;filename="pembelian.xlsx"',
+    ]);
+}
+
+public function exportPdf()
+{
+    $binary = Export::make($this->reportModel->all())
+        ->columns(['kode' => 'Kode', 'total' => 'Total'])
+        ->toPdfBinary();
+
+    return response($binary, 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'attachment;filename="laporan.pdf"',
+    ]);
 }
 ```
 

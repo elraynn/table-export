@@ -36,25 +36,71 @@ class Export
         return $this;
     }
 
+    // Sends headers and streams the file directly. Only safe to call somewhere
+    // that owns the response and exits right after — a plain script, or a
+    // framework action that returns void/never. Inside something like a
+    // Laravel controller, the framework still builds and sends its own
+    // Response after your action returns, which stomps these headers back to
+    // text/html. Use toXlsxBinary() there instead and build the response
+    // yourself; see "Using this inside a framework" in the README.
     public function asExcel(string $filename = 'export.xlsx'): void
     {
-        // PhpSpreadsheet 1.x throws a notice on PHP 7.4+ every time a numeric
-        // cell is set (DefaultValueBinder does an array offset check before
-        // its is_string check). Harmless, but a stray notice here corrupts
-        // the binary output since it's already being streamed. Suppress
-        // display for this call only, restore right after.
-        $previous = ini_set('display_errors', '0');
-        $spreadsheet = $this->toSpreadsheet();
-        ini_set('display_errors', $previous);
-
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
 
-        (new Xlsx($spreadsheet))->save('php://output');
+        echo $this->toXlsxBinary();
+    }
+
+    // Same caveat as asExcel() — see its docblock.
+    public function asPdf(string $filename = 'export.pdf'): void
+    {
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+
+        echo $this->toPdfBinary();
+    }
+
+    // The .xlsx file's raw bytes, with no headers sent and nothing echoed —
+    // safe to call from inside a framework controller. Hand it to your
+    // framework's own response/download helper.
+    public function toXlsxBinary(): string
+    {
+        $writer = new Xlsx($this->toSpreadsheet());
+
+        ob_start();
+        $writer->save('php://output');
+
+        return ob_get_clean();
+    }
+
+    // The rendered PDF's raw bytes, same deal as toXlsxBinary().
+    public function toPdfBinary(): string
+    {
+        $dompdf = new Dompdf();
+        $dompdf->loadHtml($this->toHtml());
+        $dompdf->render();
+
+        return $dompdf->output();
     }
 
     public function toSpreadsheet(): Spreadsheet
+    {
+        // PhpSpreadsheet 1.x throws a notice on PHP 7.4+ every time a numeric
+        // cell is set (DefaultValueBinder does an array offset check before
+        // its is_string check). Harmless, but a stray notice here corrupts
+        // the binary output if a caller is already streaming it. Suppress
+        // display for this call only, restore right after.
+        $previous = ini_set('display_errors', '0');
+
+        try {
+            return $this->buildSpreadsheet();
+        } finally {
+            ini_set('display_errors', $previous);
+        }
+    }
+
+    protected function buildSpreadsheet(): Spreadsheet
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -96,14 +142,6 @@ class Export
         }
 
         return $spreadsheet;
-    }
-
-    public function asPdf(string $filename = 'export.pdf'): void
-    {
-        $dompdf = new Dompdf();
-        $dompdf->loadHtml($this->toHtml());
-        $dompdf->render();
-        $dompdf->stream($filename, ['Attachment' => true]);
     }
 
     public function toHtml(): string
